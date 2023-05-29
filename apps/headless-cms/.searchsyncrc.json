@@ -1,0 +1,25 @@
+{
+  "server": {
+    "type": "meilisearch",
+    "host": "http://localhost:7700/",
+    "key": "masterKey"
+  },
+  "batchLimit": 100,
+  "reindexOnStart": false,
+  "collections": {
+    "product": {
+      "indexName": "ecom",
+      "filter": {
+        "status": "published"
+      },
+      "fields": [
+        "title",
+        "featured_image.id",
+        "category.title",
+        "tags",
+        "detail",
+        "price"
+      ]
+    }
+  }
+}

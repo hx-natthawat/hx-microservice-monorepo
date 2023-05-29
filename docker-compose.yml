@@ -1,7 +1,113 @@
-version: '3.6'
+version: '3.9'
 services:
-  mongo:
-    container_name: mongo
-    image: mongo
+  # mongo:
+  #   container_name: mongo
+  #   image: mongo
+  #   ports:
+  #     - 27017:27017
+
+  database:
+    container_name: jaroen-headless-cms-database
+    image: postgis/postgis:13-master
+    # Required when running on platform other than amd64, like Apple M1/M2:
+    # platform: linux/amd64
     ports:
-      - 27017:27017
+      - 5432:5432
+    volumes:
+      - ./data/headless-cms/database:/var/lib/postgresql/data
+    networks:
+      - jaroen
+    environment:
+      POSTGRES_USER: ${HEADLESSCMS_POSTGRES_USER:-directus}
+      POSTGRES_PASSWORD: ${HEADLESSCMS_POSTGRES_PASSWORD:-directus}
+      POSTGRES_DB: ${HEADLESSCMS_POSTGRES_DB:-directus}
+
+  cache:
+    container_name: jaroen-headless-cms-cache
+    image: redis:6
+    ports:
+      - 6379:6379
+    networks:
+      - jaroen
+
+  headless-cms:
+    container_name: jaroen-headless-cms-core
+    image: jaroen/headless-cms:${HEADLESSCMS_VERSION:-'latest'}
+    build:
+      context: .
+      dockerfile: ./apps/headless-cms/cms.dockerfile
+    ports:
+      - 8055:8055
+    volumes:
+      # By default, uploads are stored in /directus/uploads
+      # Always make sure your volumes matches the storage root when using
+      # local driver
+      - ./data/headless-cms/uploads:/directus/uploads
+      # Make sure to also mount the volume when using SQLite
+      # - ./data/headless-cms/database:/directus/database
+      # If you want to load extensions from the host
+      - ./data/headless-cms/extensions:/directus/extensions
+    networks:
+      - jaroen
+    depends_on:
+      - cache
+      - database
+    # env_file: ${ENV_FILE:-.env.local}
+    environment:
+      KEY: ${HEADLESSCMS_KEY:-'255d861b-5ea1-5996-9aa3-922530ec40b1'}
+      SECRET: ${HEADLESSCMS_SECRET:-'6116487b-cda1-52c2-b5b5-c8022c45e263'}
+
+      DB_CLIENT: ${HEADLESSCMS_DB_CLIENT:-'pg'}
+      DB_HOST: ${HEADLESSCMS_DB_HOST:-'database'}
+      DB_PORT: ${HEADLESSCMS_DB_PORT:-'5432'}
+      DB_DATABASE: ${HEADLESSCMS_DB_DATABASE:-'directus'}
+      DB_USER: ${HEADLESSCMS_DB_USER:-'directus'}
+      DB_PASSWORD: ${HEADLESSCMS_DB_PASSWORD:-'directus'}
+
+      CACHE_ENABLED: ${HEADLESSCMS_CACHE_ENABLED:-'true'}
+      CACHE_STORE: ${HEADLESSCMS_CACHE_STORE:-'redis'}
+      CACHE_REDIS: ${HEADLESSCMS_CACHE_REDIS:-'redis://cache:6379'}
+
+      ADMIN_EMAIL: ${HEADLESSCMS_ADMIN_EMAIL:-'admin@example.com'}
+      ADMIN_PASSWORD: ${HEADLESSCMS_ADMIN_PASSWORD:-'d1r3ctu5'}
+
+      # Make sure to set this in production
+      # (see https://docs.directus.io/self-hosted/config-options#general)
+      # PUBLIC_URL: 'https://directus.example.com'
+
+  search:
+    container_name: jaroen-headless-cms-search
+    image: getmeili/meilisearch:v1.1.1
+    environment:
+      - http_proxy
+      - https_proxy
+      - MEILI_MASTER_KEY=${HEADLESSCMS_MEILI_MASTER_KEY:-masterKey}
+      - MEILI_NO_ANALYTICS=${HEADLESSCMS_MEILI_NO_ANALYTICS:-true}
+      - MEILI_ENV=${HEADLESSCMS_MEILI_ENV:-development}
+      - MEILI_LOG_LEVEL
+      - MEILI_DB_PATH=${HEADLESSCMS_MEILI_DB_PATH:-/data.ms}
+    ports:
+      - ${MEILI_PORT:-7700}:7700
+    networks:
+      - jaroen
+    volumes:
+      - ./data/headless-cms/search:/data.ms
+    restart: unless-stopped
+
+  search-ui:
+    container_name: jaroen-headless-cms-search-ui
+    image: riccoxie/meilisearch-ui:latest
+    ports:
+      - 24900:24900
+    depends_on:
+      - search
+    # environment:
+    #   -
+    networks:
+      - jaroen
+    volumes:
+      - ./data/headless-cms/search-ui:/data.ms-ui
+    restart: always
+
+networks:
+  jaroen:
