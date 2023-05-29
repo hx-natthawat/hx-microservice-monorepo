@@ -1,3 +1,7 @@
+#!/bin/bash
+
+cd ..
+
 docker build -t jaroen/headless-cms .
 docker tag jaroen/headless-cms:latest jaroen/headless-cms:staging
 # docker-compose up
