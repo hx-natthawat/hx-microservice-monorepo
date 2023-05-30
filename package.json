@@ -1,7 +1,8 @@
 {
-  "name": "nodejs-microservice-monorepo",
+  "name": "jaroen",
   "version": "1.0.0",
   "description": "",
+  "private": true,
   "main": "index.js",
   "workspaces": [
     "apps/*",
@@ -12,9 +13,9 @@
     "prepare": "husky install",
     "prettier": "node node_modules/prettier/bin-prettier --check '**/*.{js,json,ts,yml,yaml}'",
     "prettier:write": "node node_modules/prettier/bin-prettier --write \"**/*.{js,json,ts,yml,yaml}\"",
-    "build": "turbo run build",
-    "dev": "turbo run dev",
-    "start": "turbo run start",
+    "build": "turbo run build --parallel",
+    "dev": "turbo run dev --parallel",
+    "start": "turbo run start --parallel",
     "lint": "turbo run lint",
     "clean": "turbo run clean"
   },
